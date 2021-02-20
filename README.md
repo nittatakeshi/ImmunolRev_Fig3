@@ -1,0 +1,1 @@
+Single-cell RNA sequencing (scRNA-seq) analysis described in an article by Nitta et al, entitiled “The fibroblast: an emerging key player in thymic T cell selection” (Immunological Reviews).  Data were extracted from the GSE dataset (accession no. GSE10791), and UMAP clustering was performed using the Seurat R Package (v.3.1.2). 
