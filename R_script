@@ -1,0 +1,45 @@
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+
+E14.1.data <- read.table("GSM2883190_E14_5_wholeThy_1.dge.txt", header = TRUE, sep = "\t", row.names = "GENE")
+E14.2.data <- read.table("GSM2883191_E14_5_wholeThy_2.dge.txt", header = TRUE, sep = "\t", row.names = "GENE")
+E14.1 <- CreateSeuratObject(counts = E14.1.data, project = "E14.1", min.cells = 3, min.features = 50)
+E14.2 <- CreateSeuratObject(counts = E14.2.data, project = "E14.2", min.cells = 3, min.features = 50)
+
+E14list <- list()
+E14list[[1]] = NormalizeData(E14.1)
+E14list[[1]] = FindVariableFeatures(E14list[[1]], selection.method = "vst")
+E14list[[2]] = NormalizeData(E14.2)
+E14list[[2]] = FindVariableFeatures(E14list[[2]], selection.method = "vst")
+E14.anchors <- FindIntegrationAnchors(object.list = E14list, anchor.features = 3000)
+E14 <- IntegrateData(anchorset = E14.anchors)
+proj_name <- data.frame(proj_name=rep("E14",ncol(E14)))
+rownames(proj_name) <- row.names(E14@meta.data)
+E14 <- AddMetaData(E14,proj_name)
+DefaultAssay(E14) <- "RNA"
+
+VlnPlot(E14, features = c("nFeature_RNA", "nCount_RNA"))
+FeatureScatter(E14, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+E14 <- subset(E14, subset = nFeature_RNA < 5000)
+
+E14 <- FindVariableFeatures(E14, selection.method = "vst", nfeatures = 2000)
+all.genes <- rownames(E14)
+E14 <- ScaleData(E14, features = all.genes)
+E14 <- RunPCA(E14, features = VariableFeatures(object = E14))
+E14 <- JackStraw(E14, num.replicate = 100)
+E14  <- ScoreJackStraw(E14 ,dims = 1:20)
+JackStrawPlot(E14 ,dims = 1:20)
+ElbowPlot(E14)
+
+E14.resolution  <- FindNeighbors(E14,dims = 1:20)
+E14.resolution <- FindClusters(E14.resolution, resolution = 0.02)
+E14.clusters  <- RunUMAP(E14.resolution, dims = 1:20)
+E14.markers <- FindAllMarkers(E14.clusters, only.pos = T, min.pct = 0.25, logfc.threshold = 0.25)
+write.csv(E14.markers,"E14.markers.csv")
+
+DimPlot(E14.clusters, reduction = "umap") + theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20), aspect.ratio = 1, legend.position = c(1,1), legend.justification = c(1,1), legend.text = element_text(size = 20))
+
+FeaturePlot(E14.clusters, features = "Bmp4", order = TRUE)+theme(legend.key.height = unit(2.0, "cm"), axis.text = element_blank(), axis.title = element_blank(), plot.title = element_text(size = 40), legend.text = element_text(size = 30), aspect.ratio = 1)
+
+
